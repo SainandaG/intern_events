@@ -1,14 +1,22 @@
-from app.models.base_model import BaseModel
-from app.models.organization_m import Organization
-from app.models.branch_m import Branch
-from app.models.department_m import Department
-from app.models.user_m import User
-from app.models.role_m import Role
-from app.models.role_right_m import RoleRight
-from app.models.menu_m import Menu
-from app.models.attachment_m import Attachment
-from app.models.audit_log_m import AuditLog
-from app.models.settings_m import Settings
+from .base_model import BaseModel
+from .organization_m import Organization
+from .branch_m import Branch
+from .department_m import Department
+from .user_m import User
+from .role_m import Role
+from .role_right_m import RoleRight
+from .menu_m import Menu
+from .attachment_m import Attachment
+from .audit_log_m import AuditLog
+from .settings_m import Settings
+
+# EVENT + Category must be imported here
+from .category_m import Category
+from .event_m import Event
+from .event_category_m import EventCategory
+
+# DO NOT IMPORT vendor models here !!
+# They auto-register because routes import them and SQLAlchemy discovers them.
 
 __all__ = [
     "BaseModel",
@@ -21,5 +29,8 @@ __all__ = [
     "Menu",
     "Attachment",
     "AuditLog",
-    "Settings"
+    "Settings",
+    "Category",
+    "Event",
+    "EventCategory",
 ]

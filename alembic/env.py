@@ -14,9 +14,20 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 # Import your Base and settings
 from app.database import Base
-from app.models import (organization_m,branch_m,department_m,role_m,user_m,menu_m,role_right_m,attachment_m,audit_log_m,
+from app.models import (
+    organization_m,
+    branch_m,
+    department_m,
+    role_m,
+    user_m,
+    menu_m,
+    role_right_m,
+    attachment_m,
+    audit_log_m,
     settings_m,
+    vendor_m,     # <-- ADDED
 )
+
 from app.config import settings  # your Pydantic settings class
 
 # Alembic Config object
@@ -42,7 +53,6 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
-
 # Online migrations
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section)
@@ -61,7 +71,6 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
-
 
 # Run offline or online depending on mode
 if context.is_offline_mode():

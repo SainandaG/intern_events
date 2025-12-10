@@ -1,92 +1,143 @@
 from sqlalchemy.orm import Session
-from app.database import SessionLocal, engine
-from app.models import Organization, Branch, Role, Menu, User
-from app.database import Base
+from app.database import SessionLocal
+from app.models.organization_m import Organization
+from app.models.branch_m import Branch
+from app.models.role_m import Role
+from app.models.menu_m import Menu
+from app.models.user_m import User
+from app.models.role_right_m import RoleRight
 from app.utils.password_utils import hash_password
+
 
 def seed_database():
     db = SessionLocal()
-    
+
     try:
         if db.query(Organization).first():
             print("Database already seeded!")
             return
-        
-        # Create Organization
+
+        # ============================
+        # Organization
+        # ============================
         org = Organization(
             name="Evination",
             code="EVI",
             email="info@evi.com",
             phone="1234567890",
-            created_by="system"
+            created_by="system",
         )
         db.add(org)
         db.flush()
-        
-        # Create Branch
+
+        # ============================
+        # Branch
+        # ============================
         branch = Branch(
             organization_id=org.id,
             name="Head Office",
             code="HO",
             is_head_office=1,
             city="Bangalore",
-            created_by="system"
+            created_by="system",
         )
         db.add(branch)
         db.flush()
-        
-        # Create Roles
-        roles_data = [
-            {"name": "Admin", "code": "ADMIN", "description": "Administrative access"}
-        ]
-        
-        roles = []
-        for role_data in roles_data:
-            role = Role(**role_data, created_by="system")
-            db.add(role)
-            roles.append(role)
+
+        # ============================
+        # Roles
+        # ============================
+        super_admin_role = Role(
+            name="Super Admin",
+            code="SUPERADMIN",
+            description="Full system access",
+            created_by="system",
+        )
+
+        admin_role = Role(
+            name="Admin",
+            code="ADMIN",
+            created_by="system"
+        )
+
+        vendor_role = Role(
+            name="Vendor",
+            code="VENDOR",
+            created_by="system"
+        )
+
+        db.add(super_admin_role)
+        db.add(admin_role)
+        db.add(vendor_role)
         db.flush()
-        
-        # Create Menus
+
+        # ============================
+        # Menus
+        # ============================
         menus_data = [
-            # Main Menus
-            {"name": "Dashboard", "code": "DASHBOARD", "icon": "dashboard", "route": "/dashboard", "menu_type": "main", "sort_order": 1},
-            {"name": "Users", "code": "USERS", "icon": "users", "route": "/users", "menu_type": "main", "sort_order": 2},
-            {"name": "Organizations", "code": "ORGANIZATIONS", "icon": "building", "route": "/organizations", "menu_type": "main", "sort_order": 3},
-            {"name": "Branches", "code": "BRANCHES", "icon": "map-pin", "route": "/branches", "menu_type": "main", "sort_order": 4},
-            {"name": "Roles", "code": "ROLES", "icon": "shield", "route": "/roles", "menu_type": "main", "sort_order": 5},
-            {"name": "Settings", "code": "SETTINGS", "icon": "settings", "route": "/settings", "menu_type": "main", "sort_order": 6},
+            {"name": "Dashboard", "code": "DASHBOARD", "icon": "dashboard", "route": "/dashboard"},
+            {"name": "Organization", "code": "ORGANIZATION", "icon": "building", "route": "/organization"},
+            {"name": "Branches", "code": "BRANCHES", "icon": "map-pin", "route": "/organization/branches"},
+            {"name": "Roles", "code": "ROLES", "icon": "shield", "route": "/organization/roles"},
+            {"name": "Users", "code": "USERS", "icon": "users", "route": "/organization/users"},
+            {"name": "Vendors", "code": "VENDORS", "icon": "store", "route": "/vendors"},
+            {"name": "Events", "code": "EVENTS", "icon": "calendar", "route": "/events"},
+            {"name": "Bidding", "code": "BIDDING", "icon": "activity", "route": "/bidding"},
+            {"name": "Orders", "code": "ORDERS", "icon": "shopping-cart", "route": "/orders"},
+            {"name": "Reports", "code": "REPORTS", "icon": "bar-chart", "route": "/reports"},
         ]
-        
-        for menu_data in menus_data:
-            menu = Menu(**menu_data, created_by="system")
+
+        menu_objects = []
+        for data in menus_data:
+            menu = Menu(**data, created_by="system")
             db.add(menu)
+            menu_objects.append(menu)
+
         db.flush()
-        
-        # Create Admin User
+
+        # ============================
+        # Super Admin user
+        # ============================
         admin_user = User(
             organization_id=org.id,
             branch_id=branch.id,
-            role_id=roles[0].id,
+            role_id=super_admin_role.id,
             username="admin",
-            email="admin@mycompany.com",
+            email="admin@evination.com",
             password_hash=hash_password("admin123"),
-            first_name="Admin",
-            last_name="*",
-            phone="9876543210",
-            created_by="system"
+            first_name="Super",
+            last_name="Admin",
+            created_by="system",
         )
+
         db.add(admin_user)
-        
+        db.flush()
+
+        # Assign menus to superadmin (full rights)
+        for menu in menu_objects:
+            db.add(
+                RoleRight(
+                    role_id=super_admin_role.id,
+                    menu_id=menu.id,
+                    can_view=True,
+                    can_create=True,
+                    can_edit=True,
+                    can_delete=True,
+                    created_by="system",
+                )
+            )
+
         db.commit()
-        print("✅ Database seeded successfully!")
-        print("👤 Admin credentials: username=admin, password=admin123")
-        
+
+        print("✨ Database seeded successfully!")
+        print("👤 Login credentials: admin / admin123")
+
     except Exception as e:
-        print(f"❌ Error seeding database: {e}")
+        print(f"❌ Error: {e}")
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed_database()
