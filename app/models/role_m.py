@@ -12,3 +12,4 @@ class Role(BaseModel):
     # Relationships
     users = relationship("User", back_populates="role")
     role_rights = relationship("RoleRight", back_populates="role")
+    role_permissions = relationship("RolePermission", back_populates="role")  # NEW

@@ -32,7 +32,7 @@ def get_vendor_role(db: Session) -> Role:
 
 @router.post("/register", response_model=VendorAuthResponse)
 def register_vendor(payload: VendorRegisterRequest, db: Session = Depends(get_db)):
-    # Check email already exists
+    # Check if email already exists
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(
@@ -41,18 +41,19 @@ def register_vendor(payload: VendorRegisterRequest, db: Session = Depends(get_db
         )
 
     vendor_role = get_vendor_role(db)
-
     username = payload.email.split("@")[0]
 
+    # Create User
     user = User(
         username=username,
         email=payload.email,
         password_hash=hash_password(payload.password),
         role_id=vendor_role.id,
         created_by="vendor_self",
+        inactive=False,  # BaseModel field
     )
     db.add(user)
-    db.flush()
+    db.flush()  # flush to get user.id before committing
 
     # Create Vendor profile
     vendor = Vendor(
@@ -65,6 +66,8 @@ def register_vendor(payload: VendorRegisterRequest, db: Session = Depends(get_db
         state=payload.state,
         zip_code=payload.zip_code,
         status="pending",
+        created_by="vendor_self",
+        inactive=False,  # BaseModel field
     )
     db.add(vendor)
     db.commit()
@@ -81,7 +84,7 @@ def register_vendor(payload: VendorRegisterRequest, db: Session = Depends(get_db
     return VendorAuthResponse(
         access_token=access_token,
         token_type="bearer",
-        user=VendorAuthUser.model_validate(user),
+        user=VendorAuthUser.model_validate(user),  # includes BaseModel fields if schema allows
     )
 
 
@@ -119,5 +122,5 @@ def login_vendor(payload: VendorLoginRequest, db: Session = Depends(get_db)):
     return VendorAuthResponse(
         access_token=access_token,
         token_type="bearer",
-        user=VendorAuthUser.model_validate(user),
+        user=VendorAuthUser.model_validate(user),  # includes BaseModel fields if schema allows
     )

@@ -2,13 +2,12 @@
 
 from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from app.models.base_model import Base
+from app.models.base_model import BaseModel
 
 
-class Vendor(Base):
+class Vendor(BaseModel):
     __tablename__ = "vendors"
 
-    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
 
     company_name = Column(String(255), nullable=False)

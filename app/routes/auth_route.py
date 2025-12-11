@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
-
 from app.database import get_db
 from app.schemas.auth_schema import LoginRequest, LoginResponse
 from app.models.user_m import User
@@ -9,21 +8,20 @@ from app.models.menu_m import Menu
 from app.models.role_right_m import RoleRight
 from app.utils.password_utils import verify_password
 from app.utils.jwt_utils import create_access_token
+from app.utils.permission_utils import get_user_permissions
 from app.config import settings
-
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-
 @router.post("/login", response_model=LoginResponse)
-async def login(
-    request: LoginRequest,
-    db: Session = Depends(get_db)
-):
-
-    # ---------------------
-    # VALIDATE USER
-    # ---------------------
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
+    """
+    Login endpoint - Returns JWT token with user info, menus, rights, and permissions
+    """
+    
+    # ============================
+    # 1. VALIDATE USER
+    # ============================
     user = db.query(User).filter(
         User.username == request.username,
         User.inactive == False
@@ -35,9 +33,9 @@ async def login(
             detail="Invalid credentials"
         )
 
-    # ---------------------
-    # GENERATE TOKEN
-    # ---------------------
+    # ============================
+    # 2. GENERATE JWT TOKEN
+    # ============================
     access_token = create_access_token(
         data={
             "sub": str(user.id),
@@ -45,27 +43,25 @@ async def login(
             "email": user.email,
             "role_id": user.role_id,
         },
-        expires_delta=timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
-    # ---------------------
-    # FETCH ROLE MENUS
-    # ---------------------
+    # ============================
+    # 3. FETCH UI MENUS (role_rights)
+    # ============================
     role_rights = db.query(RoleRight).filter(
         RoleRight.role_id == user.role_id,
-        RoleRight.can_view == True
+        RoleRight.can_view == True,
+        RoleRight.inactive == False
     ).all()
 
     menu_ids = [rr.menu_id for rr in role_rights]
-
+    
     menus = db.query(Menu).filter(
         Menu.id.in_(menu_ids),
         Menu.inactive == False
     ).order_by(Menu.sort_order).all()
 
-    # convert menu objects
     menus_out = [{
         "id": m.id,
         "name": m.name,
@@ -82,22 +78,29 @@ async def login(
         "can_delete": rr.can_delete,
     } for rr in role_rights]
 
-    # ---------------------
-    # RETURN
-    # ---------------------
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": {
+    # ============================
+    # 4. FETCH BACKEND PERMISSIONS
+    # ============================
+    permissions = get_user_permissions(db, user.role_id)
+
+    # ============================
+    # 5. RETURN COMPLETE RESPONSE
+    # ============================
+    return LoginResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user={
             "id": user.id,
             "username": user.username,
             "email": user.email,
             "first_name": user.first_name,
-            "last_name": user.last_name
+            "last_name": user.last_name,
+            "role_code": user.role.code
         },
-        "menus": menus_out,
-        "rights": rights_out
-    }
+        menus=menus_out,
+        rights=rights_out,
+        permissions=permissions
+    )
 
 
 __all__ = ["router"]

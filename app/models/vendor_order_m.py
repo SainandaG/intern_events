@@ -2,13 +2,11 @@
 
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from app.models.base_model import Base   # use Base
+from app.models.base_model import BaseModel   # use Base
 
 
-class VendorOrder(Base):
+class VendorOrder(BaseModel):
     __tablename__ = "vendor_orders"
-
-    id = Column(Integer, primary_key=True, index=True)   # <<< ADD THIS
 
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
     event_id = Column(Integer, nullable=True)

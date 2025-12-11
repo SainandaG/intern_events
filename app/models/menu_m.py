@@ -16,3 +16,4 @@ class Menu(BaseModel):
     
     # Relationships
     role_rights = relationship("RoleRight", back_populates="menu")
+    menu_permissions = relationship("MenuPermission", back_populates="menu")

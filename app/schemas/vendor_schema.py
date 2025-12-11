@@ -1,9 +1,11 @@
-# app/schemas/vendor_schema.py
-
 from typing import List, Optional
 from pydantic import BaseModel
+from datetime import datetime
 
 
+# ---------------------------
+# Base Schema (Input + Shared)
+# ---------------------------
 class VendorProfileBase(BaseModel):
     company_name: str
     business_type: Optional[str] = None
@@ -27,6 +29,9 @@ class VendorProfileBase(BaseModel):
     status: Optional[str] = None
 
 
+# ---------------------------
+# Update Schema
+# ---------------------------
 class VendorProfileUpdate(BaseModel):
     company_name: Optional[str] = None
     business_type: Optional[str] = None
@@ -47,11 +52,25 @@ class VendorProfileUpdate(BaseModel):
     tax_id: Optional[str] = None
 
     description: Optional[str] = None
+    status: Optional[str] = None
 
 
+# ---------------------------
+# Response Schema (Includes BaseModel fields)
+# ---------------------------
 class VendorProfileResponse(VendorProfileBase):
     id: int
     user_id: int
 
+    # BaseModel extended fields
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
+
+    inactive: Optional[bool] = None
+
+    created_by: Optional[str] = None
+    modified_by: Optional[str] = None
+
     class Config:
-        from_attributes = True  # Pydantic v2 (or orm_mode=True if v1)
+        from_attributes = True

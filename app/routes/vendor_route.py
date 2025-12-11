@@ -59,6 +59,9 @@ def update_my_vendor_profile(
     for field, value in data.items():
         setattr(vendor, field, value)
 
+    # Update BaseModel tracking field
+    vendor.modified_by = current_user.username
+
     db.add(vendor)
     db.commit()
     db.refresh(vendor)

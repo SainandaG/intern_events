@@ -16,7 +16,7 @@ class VendorBid(BaseModel):
 
     amount = Column(Float, nullable=False)
 
-    status = Column(String(50), default="pending")  
+    status = Column(String(50), default="pending")
     # pending, submitted, rejected, accepted, cancelled
 
     notes = Column(String(500), nullable=True)

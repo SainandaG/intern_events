@@ -16,8 +16,6 @@ class Event(BaseModel):
 
     description = Column(Text, nullable=True)
 
-    created_by_user_id = Column(Integer, nullable=True)
-
     categories = relationship(
     "EventCategory",
     back_populates="event",

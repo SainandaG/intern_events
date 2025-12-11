@@ -2,6 +2,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List
 
+
 class EventBase(BaseModel):
     title: str
     location: Optional[str] = None
@@ -22,6 +23,14 @@ class EventUpdate(EventBase):
 
 class EventResponse(EventBase):
     id: int
+
+    # 🔥 Added fields from extended BaseModel
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    modified_by: Optional[str] = None
+    inactive: Optional[bool] = None
 
     class Config:
         from_attributes = True

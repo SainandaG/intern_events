@@ -5,11 +5,16 @@ from app.database import get_db
 from app.schemas.user_schema import UserCreate, UserUpdate, UserResponse
 from app.models.user_m import User
 from app.utils.password_utils import hash_password
-from app.dependencies import get_current_active_user
+from app.dependencies import get_current_active_user, PermissionChecker
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(PermissionChecker(["user.create"]))]  # NEW
+)
 async def create_user(
     user: UserCreate,
     db: Session = Depends(get_db),
@@ -42,7 +47,11 @@ async def create_user(
     db.refresh(new_user)
     return new_user
 
-@router.get("/", response_model=List[UserResponse])
+@router.get(
+    "/",
+    response_model=List[UserResponse],
+    dependencies=[Depends(PermissionChecker(["user.view"]))]  # NEW
+)
 async def get_users(
     skip: int = 0,
     limit: int = 100,
@@ -55,7 +64,11 @@ async def get_users(
     ).offset(skip).limit(limit).all()
     return users
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get(
+    "/{user_id}",
+    response_model=UserResponse,
+    dependencies=[Depends(PermissionChecker(["user.view"]))]  # NEW
+)
 async def get_user(
     user_id: int,
     db: Session = Depends(get_db),
@@ -71,7 +84,11 @@ async def get_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@router.put("/{user_id}", response_model=UserResponse)
+@router.put(
+    "/{user_id}",
+    response_model=UserResponse,
+    dependencies=[Depends(PermissionChecker(["user.update"]))]  # NEW
+)
 async def update_user(
     user_id: int,
     user_update: UserUpdate,
@@ -94,7 +111,10 @@ async def update_user(
     db.refresh(user)
     return user
 
-@router.delete("/{user_id}")
+@router.delete(
+    "/{user_id}",
+    dependencies=[Depends(PermissionChecker(["user.delete"]))]  # NEW
+)
 async def delete_user(
     user_id: int,
     db: Session = Depends(get_db),

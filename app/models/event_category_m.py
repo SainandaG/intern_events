@@ -1,12 +1,10 @@
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from app.models.base_model import Base
+from app.models.base_model import BaseModel
 
 
-class EventCategory(Base):
+class EventCategory(BaseModel):
     __tablename__ = "event_categories"
-
-    id = Column(Integer, primary_key=True)
 
     event_id = Column(Integer, ForeignKey("events.id"))
     category_id = Column(Integer, ForeignKey("categories.id"))

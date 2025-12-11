@@ -1,12 +1,11 @@
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import relationship
-from app.models.base_model import Base
+from app.models.base_model import BaseModel
 
 
-class Category(Base):
+class Category(BaseModel):
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
 
     icon = Column(String(255), nullable=True)
@@ -24,6 +23,3 @@ class Category(Base):
         cascade="all, delete-orphan"
     )
 
-
-# IMPORTANT – do NOT import models here!
-# They are discovered automatically by SQLAlchemy

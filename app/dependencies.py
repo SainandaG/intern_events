@@ -1,8 +1,10 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from typing import List
 from app.database import get_db
 from app.utils.jwt_utils import decode_access_token
+from app.utils.permission_utils import check_permission
 from app.models.user_m import User
 
 security = HTTPBearer()
@@ -49,3 +51,27 @@ async def get_current_active_user(
             detail="Inactive user"
         )
     return current_user
+
+
+# NEW: Permission checker dependency
+class PermissionChecker:
+    def __init__(self, required_permissions: List[str]):
+        self.required_permissions = required_permissions
+    
+    def __call__(
+        self,
+        current_user: User = Depends(get_current_active_user),
+        db: Session = Depends(get_db)
+    ):
+        # SuperAdmin bypass (optional)
+        if current_user.role.code == "SUPERADMIN":
+            return current_user
+        
+        for permission_code in self.required_permissions:
+            if not check_permission(db, current_user.role_id, permission_code):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing required permission: {permission_code}"
+                )
+        
+        return current_user

@@ -29,8 +29,6 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-Base.metadata.create_all(bind=engine)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],    # allow frontend later
@@ -60,6 +58,7 @@ app.include_router(category_router, prefix="/api")
 async def root():
     return {
         "message": "Welcome to FastAPI API",
+        "version": settings.APP_VERSION,
         "docs": "/api/docs"
     }
 
