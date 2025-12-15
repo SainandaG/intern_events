@@ -1,36 +1,67 @@
+from pydantic import BaseModel, Field
+from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel
-from typing import Optional, List
+from decimal import Decimal
 
 
 class EventBase(BaseModel):
-    title: str
+    name: str
+    category_id: int
+    event_type_id: int
+    event_date: datetime
     location: Optional[str] = None
     city: Optional[str] = None
     venue: Optional[str] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
+    expected_attendees: Optional[int] = 0
+    budget: Optional[Decimal] = None
     description: Optional[str] = None
 
 
 class EventCreate(EventBase):
-    category_ids: Optional[List[int]] = []
+    event_manager_id: Optional[int] = None
 
 
-class EventUpdate(EventBase):
-    category_ids: Optional[List[int]] = []
+class EventUpdate(BaseModel):
+    name: Optional[str] = None
+    event_type_id: Optional[int] = None
+    event_date: Optional[datetime] = None
+    location: Optional[str] = None
+    city: Optional[str] = None
+    venue: Optional[str] = None
+    expected_attendees: Optional[int] = None
+    budget: Optional[Decimal] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    event_manager_id: Optional[int] = None
 
 
 class EventResponse(EventBase):
     id: int
-
-    # 🔥 Added fields from extended BaseModel
-    created_at: Optional[datetime] = None
+    organization_id: int
+    status: str
+    event_manager_id: Optional[int]
+    
+    # Populated fields
+    category_name: Optional[str] = None
+    event_type_name: Optional[str] = None
+    manager_name: Optional[str] = None
+    
+    created_at: datetime
     updated_at: Optional[datetime] = None
-    deleted_at: Optional[datetime] = None
-    created_by: Optional[str] = None
-    modified_by: Optional[str] = None
-    inactive: Optional[bool] = None
-
+    
     class Config:
         from_attributes = True
+
+
+class EventListResponse(BaseModel):
+    """For list view with stats"""
+    id: int
+    name: str
+    category: str
+    event_type: str
+    event_date: str
+    location: str
+    expected_attendees: int
+    budget: Optional[Decimal]
+    manager: Optional[str]
+    status: str

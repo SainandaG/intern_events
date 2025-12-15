@@ -34,3 +34,14 @@ class User(BaseModel):
         uselist=False,
         cascade="all, delete-orphan"
     )
+    event_manager_profile = relationship(
+        "EventManagerProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+    managed_events = relationship(
+        "Event",
+        back_populates="event_manager",
+        foreign_keys="Event.event_manager_id"
+    )

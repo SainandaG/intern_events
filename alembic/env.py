@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.database import Base
 from app.models import (organization_m,branch_m,department_m,role_m,user_m,menu_m,role_right_m,attachment_m,
     audit_log_m,settings_m,vendor_m,permission_m,role_permission_m,menu_permission_m,category_m,event_category_m,
-    event_m,vendor_bid_m,vendor_category_m,vendor_order_m,vendor_payment_m,vendor_m
+    event_m,vendor_bid_m,vendor_category_m,vendor_order_m,vendor_payment_m,vendor_m,event_type_m,event_manager_profile_m
 )
 
 from app.config import settings  # your Pydantic settings class

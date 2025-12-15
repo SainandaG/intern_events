@@ -1,4 +1,4 @@
-**Evination**- Event Booking Platform (Marriages, Birthdays, etc.)
+**Evenation**- Event Booking Platform (Marriages, Birthdays, etc.)
 
 A production-ready, reusable FastAPI project architecture for building enterprise applications.
 

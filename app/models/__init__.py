@@ -21,7 +21,8 @@ from .vendor_payment_m import VendorPayment
 from .vendor_bid_m import VendorBid
 from .vendor_category_m import VendorCategory
 from .vendor_order_m import VendorOrder
-
+from .event_type_m import EventType
+from .event_manager_profile_m import EventManagerProfile
 # DO NOT IMPORT vendor models here !!
 # They auto-register because routes import them and SQLAlchemy discovers them.
 
@@ -47,5 +48,7 @@ __all__ = [
     "VendorPayment",
     "VendorBid",
     "VendorCategory",
-    "VendorOrder"
+    "VendorOrder",
+    "EventType",
+    "EventManagerProfile"
 ]

@@ -153,6 +153,23 @@ def seed_database():
             # Report permissions
             {"code": "report.view", "name": "View Reports", "module": "report", "action": "view"},
             {"code": "report.export", "name": "Export Reports", "module": "report", "action": "export"},
+            
+            # Event Category permissions
+            {"code": "event.category.view", "name": "View Event Categories", "module": "event", "action": "view"},
+            {"code": "event.category.create", "name": "Create Event Categories", "module": "event", "action": "create"},
+            {"code": "event.category.update", "name": "Update Event Categories", "module": "event", "action": "update"},
+            {"code": "event.category.delete", "name": "Delete Event Categories", "module": "event", "action": "delete"},
+    
+            # Event Type permissions
+            {"code": "event.type.view", "name": "View Event Types", "module": "event", "action": "view"},
+            {"code": "event.type.create", "name": "Create Event Types", "module": "event", "action": "create"},
+            {"code": "event.type.update", "name": "Update Event Types", "module": "event", "action": "update"},
+            {"code": "event.type.delete", "name": "Delete Event Types", "module": "event", "action": "delete"},
+    
+            # Event Manager permissions
+            {"code": "event.manager.view", "name": "View Event Managers", "module": "event", "action": "view"},
+            {"code": "event.manager.create", "name": "Create Event Managers", "module": "event", "action": "create"},
+            {"code": "event.manager.update", "name": "Update Event Managers", "module": "event", "action": "update"},
         ]
 
         permission_objects = {}
