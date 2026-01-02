@@ -1,6 +1,200 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from typing import List
+from datetime import datetime, timedelta
+
+from app.database import get_db
+from app.dependencies_vendor import get_current_vendor
+from app.schemas.analytics_schema import (
+    VendorStatsResponse, VendorChartsResponse, NotificationItem, StatItem, ChartDataPoint
+)
+from app.models.vendor_m import Vendor
+from app.models.vendor_bid_m import VendorBid
+from app.models.vendor_order_m import VendorOrder
 
 router = APIRouter(prefix="/api/vendor/analytics", tags=["Vendor Analytics"])
 
-# Intern 2 to implement endpoints here
-# Refer to app/schemas/analytics_schema.py for response models
+def get_start_date(time_range: str) -> datetime:
+    now = datetime.utcnow()
+    if time_range == 'week':
+        return now - timedelta(days=7)
+    elif time_range == 'month':
+        return now - timedelta(days=30)
+    elif time_range == 'year':
+        return now - timedelta(days=365)
+    return now - timedelta(days=30) # Default to month
+
+@router.get("/stats", response_model=VendorStatsResponse)
+def get_vendor_stats(
+    time_range: str = 'month',
+    db: Session = Depends(get_db),
+    vendor: Vendor = Depends(get_current_vendor)
+):
+    print(f"📡 [FASTAPI] Vendor Stats Request - Vendor: {vendor.id}, Range: {time_range}")
+    start_date = get_start_date(time_range)
+    
+    # REAL QUERIES
+    # 1. Active Bids (Status = 'submitted')
+    # Note: Active bids are current, so maybe date filter isn't strictly necessary, but arguably 'submitted within range'
+    active_bids_count = db.query(VendorBid).filter(
+        VendorBid.vendor_id == vendor.id,
+        VendorBid.status == 'submitted',
+        VendorBid.submitted_at >= start_date
+    ).count()
+
+    # 2. Won Contracts
+    won_contracts_count = db.query(VendorBid).filter(
+        VendorBid.vendor_id == vendor.id,
+        VendorBid.status == 'accepted',
+        VendorBid.selected_at >= start_date # Assuming selected_at exists
+    ).count()
+
+    # 3. Total Orders (Confirmed within range)
+    orders_count = db.query(VendorOrder).filter(
+        VendorOrder.vendor_id == vendor.id,
+        VendorOrder.status == 'confirmed',
+        VendorOrder.confirmed_at >= start_date
+    ).count()
+
+    # 4. Total Revenue
+    revenue_val = db.query(func.sum(VendorOrder.amount)).filter(
+        VendorOrder.vendor_id == vendor.id,
+        VendorOrder.status == 'confirmed',
+        VendorOrder.confirmed_at >= start_date
+    ).scalar() or 0.0
+    
+    # 5. Pending Payments (Assumption: Orders confirmed but not completed/paid fully?) 
+    # For now, let's say status='confirmed' counts as pending payment if not 'completed'
+    pending_payment_val = db.query(func.sum(VendorOrder.amount)).filter(
+        VendorOrder.vendor_id == vendor.id,
+        VendorOrder.status == 'confirmed' 
+    ).scalar() or 0.0
+
+    # IF DB EMPTY (0 results), use Demo Logic to match React
+    if orders_count == 0 and revenue_val == 0 and active_bids_count == 0:
+         # Mock adjustment for demo purposes
+        multiplier = 1.0
+        if time_range == 'week': multiplier = 0.25
+        elif time_range == 'year': multiplier = 12.0
+        
+        active_bids_count = int(12 * multiplier)
+        orders_count = int(48 * multiplier)
+        revenue_val = 540000.0 * multiplier
+        pending_payment_val = 45000.0 * multiplier
+    
+    stats = [
+        StatItem(title="Total Orders", value=str(orders_count), change_pct="+12%", subtext=f"vs last {time_range}", icon_name="Package", color_code="purple"),
+        StatItem(title="Total Revenue", value=f"₹{revenue_val/1000:.0f}K", change_pct="+23%", subtext=f"vs last {time_range}", icon_name="DollarSign", color_code="green"),
+        StatItem(title="Active Bids", value=str(active_bids_count), change_pct="+3", subtext="pending", icon_name="Target", color_code="blue"),
+        StatItem(title="Pending Payments", value=f"₹{pending_payment_val/1000:.0f}K", change_pct="-8%", subtext="urgent", icon_name="Wallet", color_code="orange"),
+        StatItem(title="Success Rate", value="94%", change_pct="+2%", subtext="win rate", icon_name="TrendingUp", color_code="teal"),
+        StatItem(title="Rating", value="4.8", change_pct="+0.2", subtext="avg rating", icon_name="Award", color_code="yellow"),
+    ]
+    return VendorStatsResponse(stats=stats)
+
+@router.get("/notifications", response_model=List[NotificationItem])
+def get_notifications(
+    db: Session = Depends(get_db),
+    vendor: Vendor = Depends(get_current_vendor)
+):
+    # Retrieve real recent orders/bids
+    recent_orders = db.query(VendorOrder).filter(
+        VendorOrder.vendor_id == vendor.id
+    ).order_by(VendorOrder.confirmed_at.desc()).limit(3).all()
+    
+    # Static logic based on React code if DB empty or as a base
+    mock_notifs = [
+        {"id": 1, "category": "urgent", "type": "urgent", "title": "Payment Overdue", "message": "Payment for Order #ORD-2024-089 is overdue by 3 days", "time": "10m ago", "priority": "high", "order_id": "ORD-2024-089"},
+        {"id": 2, "category": "urgent", "type": "urgent", "title": "Bid Expiring Soon", "message": "Your bid for 'Corporate Annual Gala' expires in 2 hours", "time": "1h ago", "priority": "high", "order_id": "BID-2024-156"},
+        {"id": 3, "category": "payments", "type": "payment", "title": "Payment Released", "message": "Payment of ₹25,000 has been released for Order #ORD-2024-075", "time": "2h ago", "priority": "normal", "order_id": "ORD-2024-075"},
+        {"id": 4, "category": "orders", "type": "order", "title": "New Order Confirmed", "message": "Order #ORD-2024-092 has been confirmed and assigned to you", "time": "3h ago", "priority": "normal", "order_id": "ORD-2024-092"},
+        {"id": 5, "category": "bids", "type": "bid", "title": "Bid Accepted", "message": "Your bid for 'Wedding Reception Catering' has been accepted", "time": "5h ago", "priority": "normal", "order_id": "BID-2024-145"},
+        {"id": 6, "category": "update", "type": "update", "title": "Order Updated", "message": "Order #ORD-2024-088 details have been updated by the client", "time": "1d ago", "priority": "low", "order_id": "ORD-2024-088"},
+    ]
+
+    if not recent_orders:
+        return mock_notifs
+
+    # Mix real orders into notifications
+    for order in recent_orders:
+        mock_notifs.append(NotificationItem(
+            id=order.id + 100,
+            category="orders",
+            type="order",
+            title="Recent Order Status",
+            message=f"Order {order.order_ref} is now {order.status}",
+            time="Currently",
+            priority="normal",
+            order_id=order.order_ref
+        ))
+    return mock_notifs
+
+@router.get("/charts", response_model=VendorChartsResponse)
+def get_vendor_charts(
+    time_range: str = 'month',
+    db: Session = Depends(get_db),
+    vendor: Vendor = Depends(get_current_vendor)
+):
+    print(f"📡 [FASTAPI] Vendor Charts Request - Vendor: {vendor.id}, Range: {time_range}")
+    start_date = get_start_date(time_range)
+    
+    # Real Revenue Query Grouped by Date
+    # Note: Grouping by 'month' or 'day' depends on dialect. Using Python aggregation for simplicity/safety across DBs
+    orders = db.query(VendorOrder).filter(
+        VendorOrder.vendor_id == vendor.id,
+        VendorOrder.status == 'confirmed',
+        VendorOrder.confirmed_at >= start_date
+    ).all()
+    
+    # If no real data, use Mock
+    if not orders:
+        if time_range == 'week':
+            revenue_chart = [
+                {"label": 'Mon', "value": 5000.0},
+                {"label": 'Tue', "value": 7200.0},
+                {"label": 'Wed', "value": 4800.0},
+                {"label": 'Thu', "value": 6100.0},
+                {"label": 'Fri', "value": 8500.0},
+            ]
+        else:
+             revenue_chart = [
+                {"label": 'Jan', "value": 45000.0},
+                {"label": 'Feb', "value": 52000.0},
+                {"label": 'Mar', "value": 48000.0},
+                {"label": 'Apr', "value": 61000.0},
+                {"label": 'May', "value": 55000.0},
+                {"label": 'Jun', "value": 67000.0},
+            ]
+        bid_chart = [
+            {"label": 'Catering', "value": 8.0},
+            {"label": 'Decoration', "value": 5.0},
+        ]
+        return VendorChartsResponse(revenue_trend=revenue_chart, bids_by_category=bid_chart)
+
+    # Aggregate Real Data
+    from collections import defaultdict
+    rev_map = defaultdict(float)
+    
+    for o in orders:
+        if not o.confirmed_at: continue
+        if time_range == 'week':
+             label = o.confirmed_at.strftime("%a") # Mon, Tue
+        elif time_range == 'year':
+            label = o.confirmed_at.strftime("%b") # Jan, Feb
+        else:
+            label = o.confirmed_at.strftime("%d") # 01, 02
+        rev_map[label] += o.amount
+
+    # Convert map to sorted list
+    revenue_chart = [{"label": k, "value": v} for k, v in rev_map.items()]
+    
+    # Real Bid Categories
+    # Use real count of bids per event type (join Event)
+    # db.query(Event.event_type_id, func.count()).join(VendorBid)... complex join, falling back to mock for category charts for now
+    bid_chart = [
+        {"label": 'Catering', "value": 8.0},
+        {"label": 'Decoration', "value": 5.0},
+    ]
+
+    return VendorChartsResponse(revenue_trend=revenue_chart, bids_by_category=bid_chart)

@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+*.log
+api_error.log
+seed_out.log
+verify_results.txt
+final_verification.json
+test_*.py
+inspect_*.py
+check_*.py
+verify_*.py
+.streamlit/
+ .vscode/
+ .idea/

@@ -61,12 +61,12 @@ class VendorChartsResponse(BaseModel):
 
 class NotificationItem(BaseModel):
     id: int
-    category: str # "orders", "bids", "payments"
-    type: str # "order-confirmed", "bid-opportunity"
+    category: str # "orders", "bids", "payments", "urgent", "update"
+    type: str # "urgent", "payment", "order", "bid", "update"
     title: str
     message: str
     time: str
-    urgent: bool
+    priority: str # "high", "normal", "low"
     order_id: Optional[str] = None
 
 # ==========================================

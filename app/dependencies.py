@@ -74,3 +74,19 @@ class PermissionChecker:
                 )
         
         return current_user
+
+async def get_admin_user(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role.code not in ["ADMIN", "SUPERADMIN"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+async def get_customer_user(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role.code != "CUSTOMER" and current_user.role.code not in ["ADMIN", "SUPERADMIN"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Customer access required"
+        )
+    return current_user

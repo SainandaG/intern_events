@@ -6,11 +6,11 @@ import enum
 
 
 class EventStatus(str, enum.Enum):
-    PLANNING = "Planning"
-    CONFIRMED = "Confirmed"
-    ACTIVE = "Active"
-    COMPLETED = "Completed"
-    CANCELLED = "Cancelled"
+    PLANNING = "PLANNING"
+    CONFIRMED = "CONFIRMED"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 class BiddingStatus(str, enum.Enum):

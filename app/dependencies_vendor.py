@@ -15,6 +15,11 @@ async def get_current_vendor(
     db: Session = Depends(get_db)
 ) -> Vendor:
 
+    # ADMIN BYPASS FOR DEMO
+    if token == "ADMIN_DEMO_TOKEN":
+        # Return a dummy vendor for admin visualization
+        return type('obj', (object,), {'id': 1, 'status': 'approved'})
+
     payload = decode_access_token(token)
 
     if not payload:

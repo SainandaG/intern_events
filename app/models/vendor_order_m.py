@@ -9,7 +9,7 @@ class VendorOrder(BaseModel):
     __tablename__ = "vendor_orders"
 
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
-    event_id = Column(Integer, nullable=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=True)
 
     order_ref = Column(String(100), unique=True, index=True)
 
