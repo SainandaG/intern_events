@@ -32,9 +32,9 @@ from app.routes.admin_vendor_route import router as admin_vendor_router
 async def lifespan(app: FastAPI):
     # Startup logic
     print("🚀 Application startup: Running seeders...")
-    seed_database()
-    seed_services()
-    seed_categories_and_event_types()
+    # seed_database()
+    # seed_services()
+    # seed_categories_and_event_types()
 
     yield
 
@@ -127,8 +127,16 @@ from app.routes.admin_dashboard_route import router as admin_dashboard_router
 app.include_router(admin_dashboard_router, prefix="/api")
 
 # ---- Department Management ----
+# ---- Department Management ----
 from app.routes.department_route import router as department_router
 app.include_router(department_router, prefix="/api")
+
+# ---- NEW ANALYTICS & DASHBOARD APIs (Intern Assignment) ----
+from app.routes import admin_dashboard_api, vendor_dashboard_api, consumer_dashboard_api
+
+app.include_router(admin_dashboard_api.router)
+app.include_router(vendor_dashboard_api.router)
+app.include_router(consumer_dashboard_api.router)
 
 
 # -------------------------
