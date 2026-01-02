@@ -16,6 +16,8 @@ from app.schemas.vendor_bid_schema import (
     VendorAvailableEventSchema,
     BidRequiredServiceSchema,
     VendorMyBidSchema,
+    VendorBidUpdateSchema,
+    VendorBidDetailSchema,
 )
 
 class VendorBiddingService:
@@ -202,6 +204,7 @@ class VendorBiddingService:
             for bid, event in bids
         ]
 
+
     @staticmethod
     def _calculate_experience(year_established: Optional[str]) -> int:
         if not year_established:
@@ -210,3 +213,117 @@ class VendorBiddingService:
             return max(0, datetime.now().year - int(year_established))
         except ValueError:
             return 0
+
+    @staticmethod
+    def get_bid_details(
+        db: Session,
+        bid_id: int,
+        vendor_id: int
+    ) -> VendorBidDetailSchema:
+        bid = db.query(VendorBid).filter(
+            VendorBid.id == bid_id,
+            VendorBid.vendor_id == vendor_id,
+            VendorBid.inactive == False
+        ).first()
+
+        if not bid:
+            raise HTTPException(404, "Bid not found")
+
+        # Fetch event for details
+        event = db.query(Event).get(bid.event_id)
+
+        return VendorBidDetailSchema(
+            id=bid.id,
+            event_id=event.id,
+            event_name=event.name,
+            event_date=event.event_date.strftime("%Y-%m-%d"),
+            bidding_deadline=event.bidding_deadline.isoformat() if event.bidding_deadline else None,
+            total_amount=bid.total_amount,
+            service_breakdown=bid.service_breakdown,
+            proposal_description=bid.proposal_description,
+            timeline_days=bid.timeline_days,
+            advantages=bid.advantages or [],
+            portfolio_items=bid.portfolio_items or [],
+            terms_and_conditions=bid.terms_and_conditions,
+            cancellation_policy=bid.cancellation_policy,
+            notes=bid.notes,
+            status=bid.status,
+            submitted_at=bid.submitted_at.isoformat() if bid.submitted_at else None,
+            shortlisted=bid.shortlisted
+        )
+
+    @staticmethod
+    def update_bid(
+        db: Session,
+        bid_id: int,
+        vendor_id: int,
+        bid_data: VendorBidUpdateSchema
+    ):
+        bid = db.query(VendorBid).filter(
+            VendorBid.id == bid_id,
+            VendorBid.vendor_id == vendor_id,
+            VendorBid.inactive == False
+        ).first()
+
+        if not bid:
+            raise HTTPException(404, "Bid not found")
+
+        event = db.query(Event).get(bid.event_id)
+        if event.bidding_deadline and datetime.utcnow() > event.bidding_deadline:
+             raise HTTPException(400, "Cannot edit bid after deadline")
+        
+        if bid.status not in ["submitted"]:
+             raise HTTPException(400, f"Cannot edit bid in '{bid.status}' status")
+
+        update_data = bid_data.model_dump(exclude_unset=True)
+        if "service_breakdown" in update_data:
+            update_data["service_breakdown"] = jsonable_encoder(update_data["service_breakdown"])
+        if "portfolio_items" in update_data:
+            update_data["portfolio_items"] = jsonable_encoder(update_data["portfolio_items"])
+
+        for key, value in update_data.items():
+            setattr(bid, key, value)
+        
+        db.commit()
+        db.refresh(bid)
+        return {"message": "Bid updated successfully"}
+
+    @staticmethod
+    def withdraw_bid(
+        db: Session,
+        bid_id: int,
+        vendor_id: int
+    ):
+        bid = db.query(VendorBid).filter(
+            VendorBid.id == bid_id,
+            VendorBid.vendor_id == vendor_id,
+            VendorBid.inactive == False
+        ).first()
+
+        if not bid:
+            raise HTTPException(404, "Bid not found")
+            
+        event = db.query(Event).get(bid.event_id)
+        # Assuming one can always withdraw if it's not already awarded etc.
+        # But maybe restrict if shortlisted? strict rules: deadline only?
+        # For now, allow withdraw if status is submitted.
+        
+        if bid.status not in ["submitted"]:
+             raise HTTPException(400, f"Cannot withdraw bid in '{bid.status}' status")
+
+        # Soft delete or hard delete? "Withdraw" usually implies it's gone for consideration.
+        # But we might want to keep history.
+        # Let's set inactive=True (Soft Delete) or just delete.
+        # Given standard practice, let's just delete for now as per "Withdraw/Remove".
+        # Or mark status as "withdrawn" if enum supported. 
+        # Checking schema... statuses are strings.
+        
+        # bid.status = "withdrawn"
+        # db.commit()
+        
+        # User requested DELETE endpoint implying removal. Let's soft delete.
+        bid.inactive = True
+        db.commit()
+        
+        return {"message": "Bid withdrawn successfully"}
+

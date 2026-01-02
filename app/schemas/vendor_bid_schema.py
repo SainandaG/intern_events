@@ -100,7 +100,42 @@ class AdminShortlistSchema(BaseModel):
     bid_ids: List[int]
 
 
+
 class AdminScoreUpdateSchema(BaseModel):
     score: float
     notes: Optional[str]
+
+
+class VendorBidUpdateSchema(BaseModel):
+    total_amount: Optional[Decimal] = None
+    service_breakdown: Optional[List[BidServiceBreakdown]] = None
+    proposal_description: Optional[str] = None
+    timeline_days: Optional[int] = None
+    advantages: Optional[List[str]] = None
+    portfolio_items: Optional[List[BidPortfolioItem]] = None
+    terms_and_conditions: Optional[str] = None
+    cancellation_policy: Optional[str] = None
+    notes: Optional[str] = None
+
+class VendorBidDetailSchema(BaseModel):
+    id: int
+    event_id: int
+    event_name: str
+    event_date: str
+    bidding_deadline: Optional[str]
+    
+    total_amount: Decimal
+    service_breakdown: Optional[List[dict]]
+    proposal_description: Optional[str]
+    timeline_days: Optional[int]
+    advantages: List[str]
+    portfolio_items: List[dict]
+    terms_and_conditions: Optional[str]
+    cancellation_policy: Optional[str]
+    notes: Optional[str]
+    
+    status: str
+    submitted_at: Optional[str]
+    shortlisted: bool
+
 

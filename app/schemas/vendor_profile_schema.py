@@ -51,3 +51,46 @@ class VendorProfileUpdateRequest(BaseModel):
     insurance_provider: Optional[str]
     tax_id: Optional[str]
     description: Optional[str]
+
+
+# ---- Portfolio Upload Schemas ----
+
+class PortfolioUploadRequest(BaseModel):
+    """Request to add portfolio URLs."""
+    portfolio_urls: List[str]  # List of image/video URLs to add
+
+
+class PortfolioResponse(BaseModel):
+    """Response after portfolio update."""
+    message: str
+    portfolio_urls: List[str]
+
+
+# ---- Vendor Reviews Schemas ----
+
+class VendorReviewItem(BaseModel):
+    """Single review item for vendor view."""
+    id: int
+    consumer_name: str
+    rating: float
+    comment: Optional[str]
+    event_name: Optional[str] = None
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class VendorReviewSummary(BaseModel):
+    """Review summary stats for vendor."""
+    average_rating: float
+    total_reviews: int
+
+
+class VendorReviewsResponse(BaseModel):
+    """Paginated reviews response for vendor."""
+    summary: VendorReviewSummary
+    reviews: List[VendorReviewItem]
+    skip: int
+    limit: int
+

@@ -12,6 +12,8 @@ from app.schemas.vendor_bid_schema import (
     VendorBidCreateSchema,
     VendorAvailableEventSchema,
     VendorMyBidSchema,
+    VendorBidDetailSchema,
+    VendorBidUpdateSchema,
 )
 
 router = APIRouter(
@@ -93,3 +95,75 @@ async def get_my_bids(
         skip=skip,
         limit=limit,
     )
+
+
+@router.get(
+    "/{id}",
+    response_model=VendorBidDetailSchema,
+)
+async def get_bid_details(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get detailed view of a specific bid.
+    """
+    vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
+    if not vendor:
+        raise HTTPException(status_code=403, detail="User is not a vendor")
+
+    return VendorBiddingService.get_bid_details(
+        db=db,
+        bid_id=id,
+        vendor_id=vendor.id,
+    )
+
+
+@router.put(
+    "/{id}",
+    response_model=dict,
+)
+async def update_bid(
+    id: int,
+    bid_data: VendorBidUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Edit a specific bid. Allowed only before deadline and if status is 'submitted'.
+    """
+    vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
+    if not vendor:
+        raise HTTPException(status_code=403, detail="User is not a vendor")
+
+    return VendorBiddingService.update_bid(
+        db=db,
+        bid_id=id,
+        vendor_id=vendor.id,
+        bid_data=bid_data,
+    )
+
+
+@router.delete(
+    "/{id}",
+    response_model=dict,
+)
+async def withdraw_bid(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Withdraw a specific bid.
+    """
+    vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
+    if not vendor:
+        raise HTTPException(status_code=403, detail="User is not a vendor")
+
+    return VendorBiddingService.withdraw_bid(
+        db=db,
+        bid_id=id,
+        vendor_id=vendor.id,
+    )
+

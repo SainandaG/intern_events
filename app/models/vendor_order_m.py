@@ -21,6 +21,7 @@ class VendorOrder(BaseModel):
     completed_at = Column(DateTime, nullable=True)
 
     vendor = relationship("Vendor", back_populates="orders")
+    event = relationship("Event", foreign_keys=[event_id])
 
     payments = relationship(
         "VendorPayment",

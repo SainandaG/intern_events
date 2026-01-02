@@ -84,6 +84,19 @@ app.include_router(vendor_dashboard_router, prefix="/api")
 app.include_router(vendor_bidding_route.router, prefix="/api")
 app.include_router(vendor_notification_router, prefix="/api")
 
+# ---- Vendor Orders (NEW) ----
+from app.routes.vendor_order_route import router as vendor_order_router
+app.include_router(vendor_order_router, prefix="/api")
+
+# ---- Vendor Payments (NEW) ----
+from app.routes.vendor_payment_route import router as vendor_payment_router
+app.include_router(vendor_payment_router, prefix="/api")
+
+# ---- Vendor Activity (NEW) ----
+from app.routes.vendor_activity_route import router as vendor_activity_router
+app.include_router(vendor_activity_router, prefix="/api")
+
+
 # ---- Consumer APIs ----
 app.include_router(consumer_event_route.router, prefix="/api")
 app.include_router(consumer_selection_route.router, prefix="/api")
@@ -97,8 +110,25 @@ app.include_router(payment_route.router, prefix="/api")
 app.include_router(admin_bidding_router, prefix="/api")
 app.include_router(admin_bid_review_route.router, prefix="/api")
 
+
 # ---- Admin Vendor Management APIs ----
 app.include_router(admin_vendor_router, prefix="/api")
+
+# ---- Admin Quote Details ----
+from app.routes.admin_quote_route import router as admin_quote_router
+app.include_router(admin_quote_router, prefix="/api")
+
+# ---- Admin Order Management ----
+from app.routes.admin_order_route import router as admin_order_router
+app.include_router(admin_order_router, prefix="/api")
+
+# ---- Admin Dashboard ----
+from app.routes.admin_dashboard_route import router as admin_dashboard_router
+app.include_router(admin_dashboard_router, prefix="/api")
+
+# ---- Department Management ----
+from app.routes.department_route import router as department_router
+app.include_router(department_router, prefix="/api")
 
 
 # -------------------------
