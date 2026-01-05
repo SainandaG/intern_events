@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Any
+from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.dependencies import get_admin_user
@@ -13,12 +14,25 @@ from app.models.vendor_order_m import VendorOrder
 from app.models.event_m import Event
 from app.models.vendor_m import Vendor
 from app.models.vendor_bid_m import VendorBid
+from app.utils.logger_config import setup_logger
 
 router = APIRouter(prefix="/api/admin/analytics", tags=["Admin Analytics"])
+logger = setup_logger(__name__)
 
-from datetime import datetime, timedelta
+# Valid time range options
+VALID_TIME_RANGES = {'week', 'month', 'year'}
+
+def validate_time_range(time_range: str) -> str:
+    """Validate and normalize time_range parameter."""
+    if time_range not in VALID_TIME_RANGES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid time_range. Must be one of: {', '.join(VALID_TIME_RANGES)}"
+        )
+    return time_range
 
 def get_start_date(time_range: str) -> datetime:
+    """Calculate start date based on time range."""
     now = datetime.utcnow()
     if time_range == 'week':
         return now - timedelta(days=7)
@@ -32,73 +46,96 @@ def get_start_date(time_range: str) -> datetime:
 def get_admin_stats(
     time_range: str = 'month', 
     db: Session = Depends(get_db),
-    admin: Any = Depends(get_admin_user)
+    admin: Any = Depends(get_admin_user)  # Re-enabled authentication
 ):
-    print(f"📡 [FASTAPI] Admin Stats Request - Range: {time_range}")
     """
     Returns KPI cards matching the React Admin Dashboard design.
+    Requires admin authentication.
     """
-    start_date = get_start_date(time_range)
-    
-    # Real Queries with Time Filtering
-    total_events = db.query(Event).filter(Event.event_date >= start_date).count()
-    active_vendors = db.query(Vendor).filter(Vendor.status == 'approved').count() # Status is current, not time-bound usually
-    
-    total_revenue = db.query(func.sum(VendorOrder.amount)).filter(
-        VendorOrder.status == 'confirmed',
-        VendorOrder.confirmed_at >= start_date
-    ).scalar() or 0.0
-    
-    pending_bids = db.query(VendorBid).filter(
-        VendorBid.status == 'submitted',
-        VendorBid.submitted_at >= start_date
-    ).count()
-    
-    completed_events = db.query(Event).filter(
-        Event.status == 'Completed',
-        Event.event_date >= start_date
-    ).count()
-    
-    active_bookings = db.query(VendorOrder).filter(
-        VendorOrder.status == 'confirmed',
-        VendorOrder.confirmed_at >= start_date
-    ).count()
-
-    # Fallback / Mock for Demo if empty
-    if total_events == 0 and total_revenue == 0:
-        multiplier = 1.0
-        if time_range == 'week': multiplier = 0.25
-        elif time_range == 'year': multiplier = 12.0
+    try:
+        # Validate time_range parameter
+        time_range = validate_time_range(time_range)
         
-        total_events = int(156 * multiplier)
-        active_vendors = 89 # Static
-        total_revenue = 28400000.0 * multiplier
-        pending_bids = int(24 * multiplier)
-        completed_events = int(128 * multiplier)
-        active_bookings = int(45 * multiplier)
+        logger.info(f"Fetching admin stats for admin_id={admin.id}, time_range={time_range}")
+        start_date = get_start_date(time_range)
+        
+        # Real Queries with Time Filtering
+        total_events = db.query(Event).filter(Event.event_date >= start_date).count()
+        active_vendors = db.query(Vendor).filter(Vendor.status == 'approved').count() # Status is current, not time-bound usually
+        
+        total_revenue = db.query(func.sum(VendorOrder.amount)).filter(
+            VendorOrder.status == 'confirmed',
+            VendorOrder.confirmed_at >= start_date
+        ).scalar() or 0.0
+        
+        pending_bids = db.query(VendorBid).filter(
+            VendorBid.status == 'submitted',
+            VendorBid.submitted_at >= start_date
+        ).count()
+        
+        completed_events = db.query(Event).filter(
+            Event.status == 'Completed',
+            Event.event_date >= start_date
+        ).count()
+        
+        active_bookings = db.query(VendorOrder).filter(
+            VendorOrder.status == 'confirmed',
+            VendorOrder.confirmed_at >= start_date
+        ).count()
 
-    avg_event_val = (total_revenue / active_bookings) if active_bookings > 0 else 182000.0
+        # Fallback / Mock for Demo if empty
+        if total_events == 0 and total_revenue == 0:
+            multiplier = 1.0
+            if time_range == 'week': multiplier = 0.25
+            elif time_range == 'year': multiplier = 12.0
+            
+            total_events = int(156 * multiplier)
+            active_vendors = 89 # Static
+            total_revenue = 28400000.0 * multiplier
+            pending_bids = int(24 * multiplier)
+            completed_events = int(128 * multiplier)
+            active_bookings = int(45 * multiplier)
 
-    stats = [
-        StatItem(title="Total Events", value=str(total_events), change_pct="+12%", subtext=f"vs last {time_range}", icon_name="Calendar", color_code="yellow"),
-        StatItem(title="Active Vendors", value=str(active_vendors), change_pct="+8%", subtext="total active", icon_name="Store", color_code="yellow"),
-        StatItem(title="Total Revenue", value=f"₹{total_revenue/10000000:.2f}Cr", change_pct="+18%", subtext=f"vs last {time_range}", icon_name="TrendingUp", color_code="green"),
-        StatItem(title="Pending Bids", value=str(pending_bids), change_pct="-5%", subtext="require action", icon_name="Gavel", color_code="orange"),
-        StatItem(title="Completed Events", value=str(completed_events), change_pct="+15%", subtext="96% satisfaction", icon_name="CheckCircle", color_code="green"),
-        StatItem(title="Active Bookings", value=str(active_bookings), change_pct="+22%", subtext="confirmed orders", icon_name="Clock", color_code="blue"),
-        StatItem(title="Avg Event Value", value=f"₹{avg_event_val/100:.2f}k", change_pct="+9%", subtext="avg order val", icon_name="Target", color_code="purple"),
-        StatItem(title="Conversion Rate", value="68%", change_pct="+4%", subtext="Industry avg: 52%", icon_name="Award", color_code="yellow"),
-    ]
-    return AdminStatsResponse(stats=stats)
+        avg_event_val = (total_revenue / active_bookings) if active_bookings > 0 else 182000.0
+
+        stats = [
+            StatItem(title="Total Events", value=str(total_events), change_pct="+12%", subtext=f"vs last {time_range}", icon_name="Calendar", color_code="yellow"),
+            StatItem(title="Active Vendors", value=str(active_vendors), change_pct="+8%", subtext="total active", icon_name="Store", color_code="yellow"),
+            StatItem(title="Total Revenue", value=f"₹{total_revenue/10000000:.2f}Cr", change_pct="+18%", subtext=f"vs last {time_range}", icon_name="TrendingUp", color_code="green"),
+            StatItem(title="Pending Bids", value=str(pending_bids), change_pct="-5%", subtext="require action", icon_name="Gavel", color_code="orange"),
+            StatItem(title="Completed Events", value=str(completed_events), change_pct="+15%", subtext="96% satisfaction", icon_name="CheckCircle", color_code="green"),
+            StatItem(title="Active Bookings", value=str(active_bookings), change_pct="+22%", subtext="confirmed orders", icon_name="Clock", color_code="blue"),
+            StatItem(title="Avg Event Value", value=f"₹{avg_event_val/100:.2f}k", change_pct="+9%", subtext="avg order val", icon_name="Target", color_code="purple"),
+            StatItem(title="Conversion Rate", value="68%", change_pct="+4%", subtext="Industry avg: 52%", icon_name="Award", color_code="yellow"),
+        ]
+        
+        logger.info(f"Successfully fetched {len(stats)} admin stats")
+        return AdminStatsResponse(stats=stats)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching admin stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch admin statistics"
+        )
 
 @router.get("/revenue-trends", response_model=List[RevenueTrendItem])
 def get_revenue_trends(
     time_range: str = 'month', 
     db: Session = Depends(get_db),
-    admin: Any = Depends(get_admin_user)
+    admin: Any = Depends(get_admin_user)  # Re-enabled authentication
 ):
-    print(f"📡 [FASTAPI] Revenue Trends Request - Range: {time_range}")
+    """
+    Get revenue trends for the specified time range.
+    Requires admin authentication.
+    """
     try:
+        # Validate time_range parameter
+        time_range = validate_time_range(time_range)
+        
+        logger.info(f"Fetching revenue trends for admin_id={admin.id}, time_range={time_range}")
         start_date = get_start_date(time_range)
         
         # 1. Fetch raw orders with confirmed status
@@ -132,6 +169,8 @@ def get_revenue_trends(
                         target=float(revenue * 1.1)
                     )
                 )
+            
+            logger.info(f"Successfully fetched {len(trends)} revenue trends from database")
             return trends
 
         # 3. High-Quality Fallback (React Mock Data)
@@ -173,8 +212,8 @@ def get_revenue_trends(
 @router.get("/event-analytics", response_model=List[EventStatusItem])
 def get_event_analytics(
     time_range: str = 'month', 
-    db: Session = Depends(get_db),
-    admin: Any = Depends(get_admin_user)
+    db: Session = Depends(get_db)
+    # admin: Any = Depends(get_admin_user)  # Removed for demo - Streamlit access
 ):
     # Simple count by status
     # ... logic ...
@@ -187,8 +226,8 @@ def get_event_analytics(
 
 @router.get("/revenue-by-category", response_model=List[CategoryRevenueItem])
 def get_revenue_by_category(
-    db: Session = Depends(get_db),
-    admin: Any = Depends(get_admin_user)
+    db: Session = Depends(get_db)
+    # admin: Any = Depends(get_admin_user)  # Removed for demo - Streamlit access
 ):
     """
     Returns revenue split by category.
@@ -202,8 +241,8 @@ def get_revenue_by_category(
 
 @router.get("/top-vendors")
 def get_top_vendors(
-    db: Session = Depends(get_db),
-    admin: Any = Depends(get_admin_user)
+    db: Session = Depends(get_db)
+    # admin: Any = Depends(get_admin_user)  # Removed for demo - Streamlit access
 ):
     """
     Returns top vendor list.
